@@ -1,6 +1,10 @@
 <script setup>
-import { onMounted, defineProps, watch } from 'vue';
-import {FeatureGroup, Map, TileLayer, GeoJSON, Marker, Popup} from 'leaflet';
+import { onMounted, watch } from 'vue';
+import {FeatureGroup, Map, TileLayer, GeoJSON, Marker, Icon} from 'leaflet';
+import markerIcon   from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
 import 'leaflet/dist/leaflet.css'
 import weatherLocations from '@/weatherLocations';
 
@@ -88,6 +92,15 @@ onMounted(() => {
     maxZoom: 19,
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
+
+  delete Icon.Default.prototype._getIconUrl;
+
+  Icon.Default.mergeOptions({
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIcon2x,
+    shadowUrl: markerShadow,
+    imagePath: '',
+  });
 
   viewableFiringAreasLayer.addTo(map);
   loadFiringAreaGeoData();

@@ -61,13 +61,14 @@ async function getDartmoorFiringProgramDocument(url) {
       const body = new DOMParser().parseFromString(json.details.body, "text/html");
 
       [...body.getElementsByTagName('table')].forEach(function(table) {
-          for(let i = 1; i < table.rows.length; i++) {
-              const okehampton = {
-                day: table.rows[i].cells[1].innerText.includes('day'),
-                night: table.rows[i].cells[1].innerText.includes('night')
-              };
+          let start = 0;
 
-              data[data.length] = {
+          if (doesTableHaveHeader(table)) {
+            start = 1;
+          }
+
+          for(let i = start; i < table.rows.length; i++) {
+            data[data.length] = {
                   'date': new Date(table.rows[i].cells[0].innerText),
                   'dateText': table.rows[i].cells[0].innerText,
                   'ranges': {
@@ -97,6 +98,10 @@ async function getDartmoorFiringProgramDocument(url) {
 
 function selectedFiringTimeChanged(newFiringTime) {
   currentSelectedFiringTime.value = newFiringTime;
+}
+
+function doesTableHaveHeader(table) {
+  return table.rows[0].cells[0].innerText.toLowerCase() === 'date';
 }
 
 </script>

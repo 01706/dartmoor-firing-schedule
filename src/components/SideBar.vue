@@ -2,20 +2,23 @@
 import { ref, computed, watch, reactive } from 'vue';
 import weatherLocations from '@/weatherLocations';
 
-const {firingTimes, firingProgramDocumentUrl, activeLayers} = defineProps({
+const {firingTimes, firingProgramDocumentUrl, activeLayers, peaks} = defineProps({
   firingTimes: {
-      type: [null, Array],
-      required: true
+    type: [null, Array],
+    required: true
   },
   firingProgramDocumentUrl: {
-      type: [null, String],
+    type: [null, String],
   },
   activeLayers: {
     type: Object,
+  },
+  peaks: {
+    type: [null, Array],
   }
 });
 
-const emit = defineEmits(['selectedFiringTimeChanged', 'activeLayersChanged']);
+const emit = defineEmits(['selectedFiringTimeChanged', 'activeLayersChanged', 'selectedPeaksChanged']);
 
 const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -24,6 +27,37 @@ const todaysDate = new Date(new Date().setHours(0,0,0,0));
 const currentSelectedFiringTime = ref(null);
 let currentSelectedFiringTimeIndex = null;
 
+const peakSearchQuery = ref(null);
+
+const peaksQuery = computed(() => {
+
+  if (peakSearchQuery.value === null
+    || peakSearchQuery.value.length < 3
+  ) {
+    return peaks;
+  }
+
+  return peaks.filter((item) => {
+    return peakSearchQuery.value.toLowerCase().split(' ').every(v => item.name.toLowerCase().includes(v));
+  });
+});
+
+const selectedPeaks = ref([]);
+
+watch(
+  selectedPeaks,
+  (updated, previous) => {
+    console.debug('sidebar: selected peaks changed');
+    emit('selectedPeaksChanged', updated)
+  },
+  {
+    immediate: true,
+  }
+);
+
+/**
+ * Firing Areas
+ */
 
 const currentSelectedFiringTimeDateFormatted = computed( () => {
   if (currentSelectedFiringTime.value === null) {
@@ -59,10 +93,6 @@ watch(
     setCurrentSelectedFiringTimeByIndex(currentSelectedFiringTimeIndex);
   }
 );
-
-/**
- * Firing Areas
- */
 
 function findFiringTimesIndexFromDate(date) {
   return firingTimes.findIndex((firingTime) => {
@@ -101,6 +131,26 @@ function handleTimelinePlusButtonClick() {
 function setCurrentSelectedFiringTimeByIndex(index) {
   currentSelectedFiringTime.value = firingTimes[index];
   emit('selectedFiringTimeChanged', currentSelectedFiringTime);
+}
+
+/**
+ * Peaks & Tors
+ */
+
+function clearPeakSearchQuery() {
+  peakSearchQuery.value = null;
+}
+
+function selectAllPeaks() {
+  if (peaks === null) {
+    console.warn('peaks have not been loaded, not able to select all');
+    return;
+  }
+  selectedPeaks.value = peaks.map((e) => e.id);
+}
+
+function deselectAllPeaks() {
+  selectedPeaks.value = [];
 }
 
 </script>
@@ -142,11 +192,11 @@ function setCurrentSelectedFiringTimeByIndex(index) {
     <!-- Layers -->
     <div class="p-2 flex flex-col mb-4">
       <h3 class="text-xl font-weight-bold mb-2">Layers</h3>
+      <!-- Camping zones -->
       <div class="rounded-md bg-gray-100 m-2">
         <details class="p-3">
           <summary>
             <input type="checkbox" class="mr-2 ml-2"
-              v-bind="activeLayers.campingArea"
               v-model="activeLayers.campingArea"
               />
             Camping Zones
@@ -155,11 +205,11 @@ function setCurrentSelectedFiringTimeByIndex(index) {
           <p>Source: <a href="https://www.dartmoor.gov.uk/about-us/about-us-maps/camping-map" target="_blank" class="underline hover:no-underline">dartmoor.gov.uk</a></p>
         </details>
       </div>
+      <!-- Access land -->
       <div class="rounded-md bg-gray-100 m-2">
         <details class="p-3">
           <summary>
             <input type="checkbox" class="mr-2 ml-2"
-              v-bind="activeLayers.accessAreas"
               v-model="activeLayers.accessAreas"
               />
             Access Land
@@ -167,11 +217,11 @@ function setCurrentSelectedFiringTimeByIndex(index) {
           <p class="mt-5">Free to roam areas</p>
         </details>
       </div>
+      <!-- Ground Nesting Birds -->
       <div class="rounded-md bg-gray-100 m-2">
         <details class="p-3">
           <summary>
             <input type="checkbox" class="mr-2 ml-2"
-              v-bind="activeLayers.nestingBirdsArea"
               v-model="activeLayers.nestingBirdsArea"
             />
             Ground Nesting Birds
@@ -180,16 +230,46 @@ function setCurrentSelectedFiringTimeByIndex(index) {
           <p>Source: <a href="https://www.dartmoor.gov.uk/wildlife-and-heritage/wildlife/birds/birds-nesting" target="_blank" class="underline hover:no-underline">dartmoor.gov.uk</a></p>
         </details>
       </div>
+      <!-- Weather -->
       <div class="rounded-md bg-gray-100 m-2">
         <details class="p-3">
           <summary>
             <input type="checkbox" class="mr-2 ml-2"
-              v-bind="activeLayers.weatherPoints"
               v-model="activeLayers.weatherPoints"
             />
             Weather
           </summary>
           <p class="mt-5">Weather forecast locations</p>
+        </details>
+      </div>
+      <!-- Peaks & Tors -->
+      <div class="rounded-md bg-gray-100 m-2">
+        <details class="p-3" open>
+          <summary>
+            Peaks & Tors
+          </summary>
+          <div class="mt-3 grid grid-cols-2 gap-3">
+            <button type="button" class="bg-green-200 rounded-md cursor-pointer p-1" @click.prevent="selectAllPeaks">Show All</button>
+            <button type="buttom" class="bg-red-200 rounded-md cursor-pointer p-1" @click.prevent="deselectAllPeaks">Hide All</button>
+            <button type="buttom" class="bg-orange-200 col-span-2 rounded-md cursor-pointer p-1" @click.prevent="clearPeakSearchQuery">Clear</button>
+          </div>
+          <div class="mt-2 mb-3">
+            <input type="text" name="tor-search" class="block w-full bg-white p-1 border-1 border-gray-500" placeholder="Search ..." v-model="peakSearchQuery"/>
+          </div>
+          <!-- items -->
+          <div class="flex flex-col">
+            <div v-if="peaks" v-for="peak in peaksQuery" :key="peak.id" class="mb-4">
+              <label class="inline-block w-full border-t-1 border-gray-500"><input type="checkbox" class="mr-2 ml-2" :value="peak.id" v-model="selectedPeaks"/>{{ peak.name }}</label><br>
+              <div class="ml-9 mt-2 grid grid-cols-2 gap-3 justify-between">
+                <div><abbr title="Elevation">Ele</abbr>: {{ peak.ele? `${peak.ele}m` : 'Unknown' }}</div>
+                <div><abbr title="Camping Zone">CZ</abbr>: {{ peak.cz===true? 'Within' : 'Outside' }}</div>
+                <div><abbr title="Firing Zone">FZ</abbr>: {{ peak.fz!==null? peak.fz.charAt(0).toUpperCase() + peak.fz.slice(1) : 'Outside'  }}</div>
+              </div>
+            </div>
+            <div v-else>
+              Loading...
+            </div>
+          </div>
         </details>
       </div>
     </div>

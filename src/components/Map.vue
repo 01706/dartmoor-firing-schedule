@@ -8,8 +8,31 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import 'leaflet/dist/leaflet.css'
 import weatherLocations from '@/weatherLocations';
 
-const { currentSelectedFiringTime, activeLayers } = defineProps(['currentSelectedFiringTime', 'activeLayers']);
+const { currentSelectedFiringTime, activeLayers, currentSelectedPeaks } = defineProps(['currentSelectedFiringTime', 'activeLayers', 'currentSelectedPeaks']);
 
+const emit = defineEmits(['peaksLoaded']);
+
+const endPoints = {
+  campingArea: './data/dartmoor-camping-areas.geojson',
+  accessLand: './data/dartmoor-access-land-areas.geojson',
+  firingArea: './data/dartmoor-live-firing-areas.geojson',
+  nestingArea: './data/dartmoor-ground-nesting-birds-areas.geojson',
+  nationalParkArea: './data/dartmoor-national-park-outline.geojson',
+  peaks: './data/dartmoor-peaks.geojson',
+}
+
+let map = null;
+const firingAreasLayer = new FeatureGroup();
+const viewableFiringAreasLayer = new FeatureGroup();
+const nationalParkAreaLayer = new FeatureGroup();
+const campingAreaLayer = new FeatureGroup();
+const accessAreaLayer = new FeatureGroup();
+const nestingBirdsLayer = new FeatureGroup();
+const weatherLocationLayer = new FeatureGroup();
+const allPeaksLayer = new FeatureGroup();
+const selectedPeaksLayer = new FeatureGroup();
+
+// currentSelectedFiringTime
 watch(
   () => currentSelectedFiringTime,
   () => {
@@ -24,6 +47,7 @@ watch(
   }
 );
 
+// activeLayers.campingArea
 watch(
   () => activeLayers.campingArea,
   (newValue) => {
@@ -35,6 +59,7 @@ watch(
   }
 );
 
+// activeLayers.nestingBirdsArea
 watch(
   () => activeLayers.nestingBirdsArea,
   (newValue) => {
@@ -46,6 +71,7 @@ watch(
   }
 );
 
+// activeLayers.accessAreas
 watch(
   () => activeLayers.accessAreas,
   (newValue) => {
@@ -57,6 +83,7 @@ watch(
   }
 );
 
+// activeLayers.weatherPoints
 watch(
   () => activeLayers.weatherPoints,
   (newValue) => {
@@ -68,22 +95,55 @@ watch(
   }
 );
 
-const endPoints = {
-  campingArea: './data/dartmoor-camping-areas.geojson',
-  accessLand: './data/dartmoor-access-land-areas.geojson',
-  firingArea: './data/dartmoor-live-firing-areas.geojson',
-  nestingArea: './data/dartmoor-ground-nesting-birds-areas.geojson',
-  nationalParkArea: './data/dartmoor-national-park-outline.geojson',
-}
+// currentSelectedPeaks
+watch(
+  () => currentSelectedPeaks,
+  () => {
+    console.debug('map: selected peaks changed');
 
-let map = null;
-const firingAreasLayer = new FeatureGroup();
-const viewableFiringAreasLayer = new FeatureGroup();
-const nationalParkAreaLayer = new FeatureGroup();
-const campingAreaLayer = new FeatureGroup();
-const accessAreaLayer = new FeatureGroup();
-const nestingBirdsLayer = new FeatureGroup();
-const weatherLocationLayer = new FeatureGroup();
+    selectedPeaksLayer.clearLayers();
+
+    if (currentSelectedPeaks.length === 0) {
+      console.debug('map: no selected peaks')
+      return;
+    }
+
+    currentSelectedPeaks.forEach((peakId) => {
+      const foundLayer = findPeakLayerById(peakId);
+
+      if (foundLayer) {
+        foundLayer.addTo(selectedPeaksLayer);
+      }
+    });
+  },
+  {
+    immediate: true
+  }
+);
+
+function findPeakLayerById(id) {
+
+  if (allPeaksLayer.getLayers().length === 0
+    || allPeaksLayer.getLayers()[0].getLayers().length === 0
+  ) {
+    console.warn('No peaks have been loaded');
+    return null;
+  }
+
+  const layersToSearch = allPeaksLayer.getLayers()[0].getLayers();
+
+  let foundLayer = null;
+
+  layersToSearch.forEach((layer) => {
+
+    if (layer.feature.properties.id === id) {
+      foundLayer =layer;
+      return;
+    }
+  });
+
+  return foundLayer;
+}
 
 onMounted(() => {
   map = new Map('map').setView([50.5762, -3.89190], 10);
@@ -109,6 +169,8 @@ onMounted(() => {
   loadAccessLand();
   loadGroundNestingBirds();
   loadWeatherLocations();
+  loadAllPeaks();
+  addLayerSelectedPeaks();
 });
 
 /**
@@ -344,6 +406,63 @@ function removeLayerWeatherPoints() {
   map.removeLayer(weatherLocationLayer);
 }
 
+/**
+ * Peaks/Tors
+ */
+
+async function loadAllPeaks() {
+  const peaks = [];
+  try {
+    const response = await fetch(endPoints.peaks);
+    if (!response.ok) {
+        throw new Error('Unable to peaks and tors geojson');
+    }
+
+    const json = await response.json();
+
+    new GeoJSON(json, {
+      onEachFeature: function(feature, layer) {
+        let popupContent = '';
+        if (feature.properties.name) {
+          popupContent = `<strong>${feature.properties.name}</strong><br>`;
+        }
+
+        if (feature.properties.ele) {
+          popupContent += `Elevation: ${feature.properties.ele}m`;
+        }
+
+        if (popupContent) {
+          layer.bindPopup(popupContent);
+        }
+
+        peaks.push({
+          id: feature.properties.id,
+          name: feature.properties.name,
+          ele: feature.properties.ele,
+          cz: feature.properties.cz,
+          fz: feature.properties.fz,
+        });
+      },
+    }).addTo(allPeaksLayer);
+
+    emit('peaksLoaded', peaks);
+
+  } catch (error) {
+    console.error("Error:", error);
+  }
+}
+
+function addLayerSelectedPeaks() {
+  selectedPeaksLayer.addTo(map);
+}
+
+function addLayerAllPeaks() {
+  allPeaksLayer.addTo(map);
+}
+
+function removeLayerAllPeaks() {
+  allPeaksLayer.addTo(map);
+}
 </script>
 
 <template>

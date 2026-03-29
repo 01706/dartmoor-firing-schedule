@@ -6,6 +6,8 @@ import SideBar from './components/SideBar.vue';
 const firingTimes = ref(null);
 const firingProgramDocumentUrl = ref(null);
 const currentSelectedFiringTime = ref(null);
+const peaks = ref(null);
+const currentSelectedPeaks = ref([]);
 
 const activeLayers = reactive({
   firingArea: false,
@@ -104,6 +106,22 @@ function doesTableHaveHeader(table) {
   return table.rows[0].cells[0].innerText.toLowerCase() === 'date';
 }
 
+
+// Peaks and tors
+
+function peaksLoaded(loadedPeaks) {
+  peaks.value = loadedPeaks
+    // Remove peaks which dont have a name
+    .filter((item) => {
+      return item.name !== undefined && item.name !== null
+    })
+    // Sort by name ASC
+    .sort((a, b) => (a.name > b.name)? 1 : ((b.name > a.name)? -1: 0));
+}
+
+function selectedPeaksChanged(selectedPeaks) {
+  currentSelectedPeaks.value = selectedPeaks;
+}
 </script>
 
 <template>
@@ -111,24 +129,26 @@ function doesTableHaveHeader(table) {
   </header>
 
   <div class="flex flex-col sm:flex-row grow h-screen">
-    <aside class="h-64 w-full sm:h-full sm:w-64 overflow-x-scroll">
+    <aside class="h-64 w-full sm:h-full sm:w-sm overflow-x-scroll">
       <SideBar
         @selectedFiringTimeChanged="selectedFiringTimeChanged"
+        @selectedPeaksChanged="selectedPeaksChanged"
         :firingTimes="firingTimes"
         :firingProgramDocumentUrl="firingProgramDocumentUrl"
         :activeLayers="activeLayers"
+        :peaks="peaks"
       />
     </aside>
     <main class="grow">
       <Map
+        @peaksLoaded="peaksLoaded"
         :currentSelectedFiringTime="currentSelectedFiringTime"
         :activeLayers="activeLayers"
+        :currentSelectedPeaks="currentSelectedPeaks"
       />
     </main>
   </div>
-
 </template>
 
 <style scoped>
-
 </style>

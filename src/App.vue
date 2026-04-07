@@ -8,6 +8,7 @@ const firingProgramDocumentUrl = ref(null);
 const currentSelectedFiringTime = ref(null);
 const peaks = ref(null);
 const currentSelectedPeaks = ref([]);
+const peakToZoomTo = ref(null);
 
 const activeLayers = reactive({
   firingArea: false,
@@ -122,6 +123,11 @@ function peaksLoaded(loadedPeaks) {
 function selectedPeaksChanged(selectedPeaks) {
   currentSelectedPeaks.value = selectedPeaks;
 }
+
+function zoomToPeak(peaKId) {
+  peakToZoomTo.value = peaKId;
+  setTimeout(() => peakToZoomTo.value = null, 100);
+}
 </script>
 
 <template>
@@ -133,6 +139,7 @@ function selectedPeaksChanged(selectedPeaks) {
       <SideBar
         @selectedFiringTimeChanged="selectedFiringTimeChanged"
         @selectedPeaksChanged="selectedPeaksChanged"
+        @zoomToPeak="zoomToPeak"
         :firingTimes="firingTimes"
         :firingProgramDocumentUrl="firingProgramDocumentUrl"
         :activeLayers="activeLayers"
@@ -145,6 +152,7 @@ function selectedPeaksChanged(selectedPeaks) {
         :currentSelectedFiringTime="currentSelectedFiringTime"
         :activeLayers="activeLayers"
         :currentSelectedPeaks="currentSelectedPeaks"
+        :peakToZoomTo="peakToZoomTo"
       />
     </main>
   </div>

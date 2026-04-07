@@ -8,7 +8,7 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import 'leaflet/dist/leaflet.css'
 import weatherLocations from '@/weatherLocations';
 
-const { currentSelectedFiringTime, activeLayers, currentSelectedPeaks } = defineProps(['currentSelectedFiringTime', 'activeLayers', 'currentSelectedPeaks']);
+const { currentSelectedFiringTime, activeLayers, currentSelectedPeaks, peakToZoomTo } = defineProps(['currentSelectedFiringTime', 'activeLayers', 'currentSelectedPeaks', 'peakToZoomTo']);
 
 const emit = defineEmits(['peaksLoaded']);
 
@@ -118,6 +118,20 @@ watch(
   },
   {
     immediate: true
+  }
+);
+
+// peakToZoomTo
+watch(
+  () => peakToZoomTo,
+  () => {
+    const peakLayer = findPeakLayerById(peakToZoomTo);
+
+    if (peakLayer === null) {
+      return;
+    }
+
+    map.setView(peakLayer.getLatLng(), 17);
   }
 );
 

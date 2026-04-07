@@ -18,7 +18,7 @@ const {firingTimes, firingProgramDocumentUrl, activeLayers, peaks} = defineProps
   }
 });
 
-const emit = defineEmits(['selectedFiringTimeChanged', 'activeLayersChanged', 'selectedPeaksChanged']);
+const emit = defineEmits(['selectedFiringTimeChanged', 'activeLayersChanged', 'selectedPeaksChanged', 'zoomToPeak']);
 
 const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -153,6 +153,10 @@ function deselectAllPeaks() {
   selectedPeaks.value = [];
 }
 
+function zoomToPeak(peakId) {
+  emit('zoomToPeak', peakId);
+}
+
 </script>
 
 <template>
@@ -264,6 +268,7 @@ function deselectAllPeaks() {
                 <div><abbr title="Elevation">Ele</abbr>: {{ peak.ele? `${peak.ele}m` : 'Unknown' }}</div>
                 <div><abbr title="Camping Zone">CZ</abbr>: {{ peak.cz===true? 'Within' : 'Outside' }}</div>
                 <div><abbr title="Firing Zone">FZ</abbr>: {{ peak.fz!==null? peak.fz.charAt(0).toUpperCase() + peak.fz.slice(1) : 'Outside'  }}</div>
+                <div><button type="button" class="bg-blue-200 rounded-md cursor-pointer pl-3 pr-3 pt-2 pb-2" @click.prevent="zoomToPeak(peak.id)">Zoom to</button></div>
               </div>
             </div>
             <div v-else>

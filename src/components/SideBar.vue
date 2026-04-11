@@ -68,7 +68,7 @@ const currentSelectedFiringTimeDateFormatted = computed( () => {
     return 'Today';
   }
 
-  return  days[currentSelectedFiringTime.value.date.getDay()]
+  return days[currentSelectedFiringTime.value.date.getDay()]
         + ' ' + currentSelectedFiringTime.value.date.getDate()
         + ' ' + months[currentSelectedFiringTime.value.date.getMonth()];
 });
@@ -76,6 +76,12 @@ const currentSelectedFiringTimeDateFormatted = computed( () => {
 watch(
   () => firingTimes,
   () => {
+    if(firingTimes === null ||
+      firingTimes === undefined
+    ) {
+      console.warn('No firing times')
+      return;
+    }
 
     if (currentSelectedFiringTime.value !== null) {
       console.warn('Selected date is already set');

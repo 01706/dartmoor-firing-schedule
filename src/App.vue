@@ -20,38 +20,50 @@ const activeLayers = reactive({
 
 getDartmoorFiringProgramDocumentUrl()
   .then((url) => {
-      return getDartmoorFiringProgramDocument(url);
+    return getDartmoorFiringProgramDocument(url);
   })
   .then((data) => {
-      firingTimes.value = data;
+    if (data === null
+        || data === undefined
+    ) {
+        return;
+    }
+    firingTimes.value = data;
+  })
+  .catch((error) => {
+    console.error(error);
+    Promise.reject(error);
+    return;
   });
 
 async function getDartmoorFiringProgramDocumentUrl() {
   const endPoint = 'https://www.gov.uk/api/content/government/publications/dartmoor-firing-times';
 
-  try {
-      const response = await fetch(endPoint);
-      if (!response.ok) {
-          throw new Error('Unable to get reach firing program');
-      }
+  const response = await fetch(endPoint, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+    }
+  });
 
-      const json = await response.json();
+  if (!response.ok) {
+      throw new Error('Unable to get reach firing program');
+  }
 
-      if(json.document_type === 'redirect') {
-          throw new Error('Endpoint has changed, being redirected to '+json.redirects[0].destination);
-      }
+  const json = await response.json();
 
-      if(json.document_type !== 'guidance') {
-          throw new Error('Got an unexpected document type');
-      }
+  if(json.document_type === 'redirect') {
+    throw new Error('Endpoint has changed, being redirected to '+json.redirects[0].destination);
+  }
 
-      if (json.details.attachments.length > 0) {
-          return json.details.attachments[0].url;
-      } else {
-          throw new Error('Unable to get the latest firing program document');
-      }
-  } catch (error) {
-      console.error("Error:", error);
+  if(json.document_type !== 'guidance') {
+    throw new Error('Got an unexpected document type');
+  }
+
+  if (json.details.attachments.length > 0) {
+    return json.details.attachments[0].url;
+  } else {
+    throw new Error('Unable to get the latest firing program document');
   }
 }
 
@@ -60,50 +72,56 @@ async function getDartmoorFiringProgramDocument(url) {
 
   let data = [];
   try {
-      const response = await fetch(endPoint);
-      if (!response.ok) {
-          throw new Error('Unable to get reach firing program');
+    const response = await fetch(endPoint, {
+      method: 'GET',
+      headers: {
+      'Accept': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Unable to get reach firing program');
+    }
+
+    const json = await response.json();
+    if (json.details.body.length == 0) {
+      throw new Error('Unable to get the latest firing program content')
+    }
+
+    const body = new DOMParser().parseFromString(json.details.body, "text/html");
+
+    [...body.getElementsByTagName('table')].forEach(function(table) {
+      let start = 0;
+
+      if (doesTableHaveHeader(table)) {
+        start = 1;
       }
 
-      const json = await response.json();
-      if (json.details.body.length == 0) {
-          throw new Error('Unable to get the latest firing program content')
+      for(let i = start; i < table.rows.length; i++) {
+        data[data.length] = {
+          'date': new Date(table.rows[i].cells[0].innerText),
+          'dateText': table.rows[i].cells[0].innerText,
+          'ranges': {
+            'okehampton': {
+              day: table.rows[i].cells[1].innerText.includes('day'),
+              night: table.rows[i].cells[1].innerText.includes('night')
+            },
+            'willsworth': {
+              day: table.rows[i].cells[2].innerText.includes('day'),
+              night: table.rows[i].cells[2].innerText.includes('night')
+            },
+            'merrivale': {
+              day: table.rows[i].cells[3].innerText.includes('day'),
+              night: table.rows[i].cells[3].innerText.includes('night')
+            },
+          }
+        }
       }
+    });
 
-      const body = new DOMParser().parseFromString(json.details.body, "text/html");
-
-      [...body.getElementsByTagName('table')].forEach(function(table) {
-          let start = 0;
-
-          if (doesTableHaveHeader(table)) {
-            start = 1;
-          }
-
-          for(let i = start; i < table.rows.length; i++) {
-            data[data.length] = {
-                  'date': new Date(table.rows[i].cells[0].innerText),
-                  'dateText': table.rows[i].cells[0].innerText,
-                  'ranges': {
-                    'okehampton': {
-                      day: table.rows[i].cells[1].innerText.includes('day'),
-                      night: table.rows[i].cells[1].innerText.includes('night')
-                    },
-                    'willsworth': {
-                      day: table.rows[i].cells[2].innerText.includes('day'),
-                      night: table.rows[i].cells[2].innerText.includes('night')
-                    },
-                    'merrivale': {
-                      day: table.rows[i].cells[3].innerText.includes('day'),
-                      night: table.rows[i].cells[3].innerText.includes('night')
-                    },
-                }
-              }
-          }
-      });
-
-      firingProgramDocumentUrl.value = url;
+    firingProgramDocumentUrl.value = url;
   } catch (error) {
-      console.error("Error:", error);
+    console.error("Error:", error);
   }
   return data;
 }

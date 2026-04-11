@@ -27,7 +27,7 @@ getDartmoorFiringProgramDocumentUrl()
   });
 
 async function getDartmoorFiringProgramDocumentUrl() {
-  const endPoint = 'https://www.gov.uk/api/content/government/publications/dartmoor-firing-programme';
+  const endPoint = 'https://www.gov.uk/api/content/government/publications/dartmoor-firing-times';
 
   try {
       const response = await fetch(endPoint);
@@ -36,10 +36,19 @@ async function getDartmoorFiringProgramDocumentUrl() {
       }
 
       const json = await response.json();
+
+      if(json.document_type === 'redirect') {
+          throw new Error('Endpoint has changed, being redirected to '+json.redirects[0].destination);
+      }
+
+      if(json.document_type !== 'guidance') {
+          throw new Error('Got an unexpected document type');
+      }
+
       if (json.details.attachments.length > 0) {
           return json.details.attachments[0].url;
       } else {
-          throw new Error('Unable to get the latest firing program document')
+          throw new Error('Unable to get the latest firing program document');
       }
   } catch (error) {
       console.error("Error:", error);

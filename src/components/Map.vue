@@ -1,9 +1,6 @@
 <script setup>
 import { onMounted, watch } from 'vue';
-import {FeatureGroup, Map, TileLayer, GeoJSON, Marker, Icon} from 'leaflet';
-import markerIcon   from 'leaflet/dist/images/marker-icon.png';
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import { FeatureGroup, LeafletMap, GeoJSON, Marker, DefaultIcon, TileLayer } from 'leaflet';
 
 import 'leaflet/dist/leaflet.css'
 import weatherLocations from '@/weatherLocations';
@@ -160,21 +157,12 @@ function findPeakLayerById(id) {
 }
 
 onMounted(() => {
-  map = new Map('map').setView([50.5762, -3.89190], 10);
+  map = new LeafletMap('map').setView([50.5762, -3.89190], 10);
 
-  const tiles = new TileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  new TileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
-
-  delete Icon.Default.prototype._getIconUrl;
-
-  Icon.Default.mergeOptions({
-    iconUrl: markerIcon,
-    iconRetinaUrl: markerIcon2x,
-    shadowUrl: markerShadow,
-    imagePath: '',
-  });
 
   viewableFiringAreasLayer.addTo(map);
   loadFiringAreaGeoData();
@@ -408,7 +396,7 @@ function removeLayerGroundNestingBirds() {
 
 function loadWeatherLocations() {
   weatherLocations.forEach((item) =>{
-    new Marker([item.geometry.lat, item.geometry.lng]).bindPopup(item.locationName).addTo(weatherLocationLayer);
+    new Marker([item.geometry.lat, item.geometry.lng], {icon: new DefaultIcon({color: 'crimson'})}).bindPopup(item.locationName).addTo(weatherLocationLayer);
   });
 }
 
